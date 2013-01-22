@@ -1,5 +1,5 @@
 #include "dfygraviti.h"
-#include <EEPROM.h>
+
 // constructors for setting the baud rates and initializing the values
 DfygravitiServer::DfygravitiServer() {
 	DfygravitiServer::baud = 9600;
@@ -9,14 +9,8 @@ DfygravitiServer::DfygravitiServer() {
 
 // initializes the RTC
 void DfygravitiServer::initialize() {
-	Wire.begin();
-	RTC.begin();
-	if (!RTC.isrunning())
-		rtc_enabled = false;
-	else
-		rtc_enabled = true;
 	irrecv.enableIRIn();
-	
+	DBman.initializeDB(rtcclk.getTime());
 }
 
 //Set the RTC for the present time.. needs to be invoked for maintainance
@@ -32,7 +26,7 @@ int DfygravitiServer::setRtcTime() {
 				break;
 			}
 	datex[11] = '\0';
-	Serial.print(datex);
+	//Serial.print(datex);
 	for (int i = 0; i < 8; i++)
 		while (1)
 			if (Serial.available()) {
@@ -40,18 +34,16 @@ int DfygravitiServer::setRtcTime() {
 				break;
 			}
 	timex[7] = '\0';
-	Serial.println(timex);
+	//Serial.println(timex);
 	//Serial.flush();
 	//time = dat[3] << (3 * 8) | dat[2] << (2 * 8) | dat[1] << (1 * 8) | dat[0];
-	if (rtc_enabled)
-		RTC.adjust(DateTime(datex, timex));
+	rtcclk.setTime(datex, timex);
 	getRtcTime();
 }
 
 //Sends the unix time to the Phone in JSON format.. needs to be tested
 void DfygravitiServer::getRtcTime() {
-	DateTime now = RTC.now();
-	Serial.print(now.unixtime());
+	Serial.print(rtcclk.getTime());
 }
 
 //Sets the tv channel.. 
@@ -75,13 +67,15 @@ void DfygravitiServer::setTvChannel() {
 void DfygravitiServer::irRemotebuttonPressPoll() {
 	if (irrecv.decode(&results)) {
 		if (results.decode_type != UNKNOWN) {
-
-			DateTime now = RTC.now();
-			Serial.println(results.value, HEX);
-			DBman.push(now.unixtime(), results.value);
+			Serial.print(results.value, HEX);
+			DBman.push(rtcclk.getTime(), results.value);
 		}
 		irrecv.resume();
 	}
+}
+void DfygravitiServer::clearMemory() {
+	for (int i = 0; i < 512; i++)
+		EEPROM.write(i, 0);
 }
 
 char * DfygravitiServer::getSerialData(int byteLen) {
@@ -98,15 +92,15 @@ char * DfygravitiServer::getSerialData(int byteLen) {
 //////////////////////////////////////////////////Database Manager////////////////////////
 
 DatabaseManager::DatabaseManager() {
-	byte programCode = EEPROM.read(0);
+	uint8_t programCode = EEPROM.read(0);
 	if (programCode != DatabaseString)
-		initializeDB();
+		initializeDB(rtcclk.getTime());
 }
 
-bool DatabaseManager::initializeDB() {
+bool DatabaseManager::initializeDB(uint32_t timenow) {
 	pushToEEPROM(0, 1, DatabaseString);
-	pushlastUpdateTime(1234567);
-	pushlastDumpTime(1234567);
+	pushlastUpdateTime(timenow);
+	pushlastDumpTime(timenow);
 	setEEPROMLocation (INTERNAL);
 	stackEntries(0);
 	stackStartAddress(13);
@@ -214,12 +208,19 @@ uint8_t DatabaseManager::push(uint32_t receiption_time, uint32_t key) {
 	uint8_t keylen = getByteLen(key);
 	uint8_t sp = stackpointer();
 	uint8_t status;
-	if ((dTime <= 1 && key == -1) || dTime <= 1 && key == lastkey) {
-		pushToEEPROM(sp - 1, 1, getFromEEPROM(sp - 1, 1) + 1);
-		return 0;
-	}
+	Serial.print("   Pushing  ");
+	Serial.print("  stackPointer:");
+	Serial.print(sp);
+
+	//if ((dTime <= 1 && key == -1) || dTime <= 1 && key == lastkey) {
+	//	if (stackStartAddress() != stackpointer())
+	pushToEEPROM(sp - 1, 1, getFromEEPROM(sp - 1, 1) + 1);
+	//	return 0;
+	//}
 	status = ((dtimeLen - 1) << 6) | ((keylen - 1) << 4)
 			| (getFromEEPROM(sp, 1) & 0x00ff);
+	Serial.print("  Register:");
+	Serial.print(status);
 	pushToEEPROM(sp, 1, status);
 	pushToEEPROM(sp + 1, dtimeLen, dTime);
 	pushToEEPROM(sp + dtimeLen + 1, keylen, key);
@@ -229,6 +230,28 @@ uint8_t DatabaseManager::push(uint32_t receiption_time, uint32_t key) {
 			(sp + dtimeLen + keylen + 1 + 1) & 0xff);
 	incStackCount();
 	lastkey = key;
+	Serial.print(sp + dtimeLen + keylen + 1 + 1);
+	Serial.print("\n");
 	return sp + dtimeLen + keylen + 1 + 1;
 }
 
+clock::clock() {
+	Wire.begin();
+	RTC.begin();
+	if (!RTC.isrunning()) {
+		Serial.println("RTC Connected");
+	} else {
+		Serial.println("Rtc disabled");
+	}
+	
+}
+
+uint32_t clock::getTime() {
+	now = RTC.now();
+	timeSnapshot = now.unixtime();
+	return timeSnapshot;
+}
+
+bool clock::setTime(char*datex, char*timex) {
+	RTC.adjust(DateTime(datex, timex));
+}

@@ -9,21 +9,11 @@
 #include <Wire.h>
 #include <RTClib.h>
 #include <Arduino.h>
-
-class IRUserDatabase {
-public:
-	IRUserDatabase();
-	//database elements
-	uint32_t receiptionTime;	// What time the key is pressed
-	uint32_t key; 				// Which key is pressed
-	uint8_t pressedCycles;  // How long it is pressed
-	uint8_t statusRegister;
-};
-
+#include <EEPROM.h>
 class DatabaseManager {
 public:
 	DatabaseManager();
-	bool initializeDB();
+	bool initializeDB(uint32_t timenow);
 	uint32_t getlastDumpTime();
 	uint32_t getlastUpdateTime();
 	bool pushlastDumpTime(uint32_t mytime);
@@ -41,7 +31,6 @@ public:
 	uint8_t lastLoc;
 
 private:
-	RTC_DS1307 RTC;
 	uint32_t lastUpdateTime;
 	uint32_t lastDumpTime;
 	uint8_t stackEntrys;
@@ -49,7 +38,6 @@ private:
 	bool pushToEEPROM(uint8_t start, uint8_t bytes, uint32_t data);
 	uint8_t getByteLen(uint32_t);
 	void incStackCount();
-
 };
 
 class DfygravitiServer {
@@ -60,9 +48,8 @@ public:
 	void getRtcTime();
 	void setTvChannel();
 	void irRemotebuttonPressPoll();
-
+	void clearMemory();
 private:
-	RTC_DS1307 RTC;
 	uint16_t baud;
 	boolean rtc_enabled;
 	IRrecv irrecv;
@@ -71,4 +58,16 @@ private:
 	char * getSerialData(int);
 	DatabaseManager DBman;
 };
+
+class clock {
+public:
+	clock();
+	uint32_t getTime();
+	bool setTime(char *, char *);
+private:
+	RTC_DS1307 RTC;
+	DateTime now;
+	uint32_t timeSnapshot;
+} rtcclk;
+
 #endif
