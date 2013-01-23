@@ -31,8 +31,9 @@ public:
 	uint8_t lastLoc;
 	void clearMemory();
 	void readRaw();
-	void readRaw(uint8_t start,uint8_t stop);
-	void pop(uint16_t address);
+	void readRaw(uint8_t start, uint8_t stop);
+//	void pop(uint16_t address);
+	void pop();
 private:
 	uint8_t stackEntrys;
 	uint32_t getFromEEPROM(uint8_t start, uint8_t bytes);
@@ -54,6 +55,7 @@ public:
 	void clearMemory();
 	uint8_t begin();
 	void readRaw();
+	void pop();
 private:
 	uint16_t baud;
 	IRrecv irrecv;
