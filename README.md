@@ -39,13 +39,23 @@ This library contains Sub libraries including
 
 ###Data format for date setting
 The time needs to be sent as:
+
 		MMM dd yyyyhh:mm:ss
+
 example:
+
 		Jan 23 201315:33:24
+
 Please note the spaces and the colens. Wrong format will not be accepted and will lead to erraneous output.
+
+
 **OR**
+
+
 Send the unix time in string format ie 
+
 		"1353442556"
+
 Note that the string is 10 characters long.
 
 ###Setting Channel
@@ -54,11 +64,13 @@ example:
 		0x38 0x39 0xA8B92 0x38 0x39 0x40B92 ...........
 ###Dumping the data stored in EEPROM to the app
 Sending the above command will result in getting a stream of json encoded string as shown:
-	[{'Key':A8B92,'Count':6,'Time':2657146590}
-	{'Key':80B92,'Count':4,'Time':2657146473}
-	{'Key':40B92,'Count':5,'Time':2657146472}
-	{'Key':A8B92,'Count':7,'Time':2657146470}
-	]
+
+		[{'Key':A8B92,'Count':6,'Time':2657146590}
+		{'Key':80B92,'Count':4,'Time':2657146473}
+		{'Key':40B92,'Count':5,'Time':2657146472}
+		{'Key':A8B92,'Count':7,'Time':2657146470}
+		]
+
 Separation of the characters and the algorithms should be used at the app end for efficient use.
 
 ###Raw data
