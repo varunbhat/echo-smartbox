@@ -54,14 +54,20 @@ Please note the spaces and the colens. Wrong format will not be accepted and wil
 
 Send the unix time in string format ie 
 
+example:
+
 		"1353442556"
 
 Note that the string is 10 characters long.
 
 ###Setting Channel
 The prefix 0x38 and 0x39 should for each channel to be transmitted
+
+
 example:
+
 		0x38 0x39 0xA8B92 0x38 0x39 0x40B92 ...........
+
 ###Dumping the data stored in EEPROM to the app
 Sending the above command will result in getting a stream of json encoded string as shown:
 
