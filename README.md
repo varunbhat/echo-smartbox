@@ -14,7 +14,7 @@ This library contains Sub libraries including
 
 * Copy the **Dfygraviti** folder in the repository into the following path
 
-<pre><code> ~/path/to/arduino/libraries/</code></pre>
+	~/path/to/arduino/libraries/
 
 * Copy the IRDfygraviti folder into your sketchbook directory, or just open it in **Arduino IDE**
 * Connect the Arduino Uno to the USB port
@@ -26,30 +26,13 @@ This library contains Sub libraries including
 * the Codes are as follows.
 
 
-<pre>
+| Values to be Sent               | Description                                                               |
+|:-------------------------------:|:--------------------------------------------------------------------------|
+| 0x38 and 0x39                   |Send the data to the TV through IR                                         |
+| 0x45 and 0x21                   |Get the RTC time                                                           |    
+| 0x51 and 0x4a                   |clear the EEPROM Stored Data                                               |
+| 0x19 and 0x91 and 0xFF          |Get all the stack data stored in the EEPROM                                |
+| 0x19 and 0x91 and 0x01 and *id* |Get one element in the stack ex:0x19 0x91 0x01 0x0a to get the 10th element|
 
-<table border>
-<tr>
-	<td>   0x38 and 0x39  </td>
-	<td>  Send the data to the TV through IR  </td>
-</tr>
-<tr>
-	<td>   0x45 and 0x21 </td>
-	<td>  Get the RTC time</td>
-</tr>
-<tr>
-	<td>   0x51 and 0x4a </td>
-	<td>  clear the EEPROM Stored Data</td>
-</tr>
-<tr>
-	<td>   0x19 and 0x91 and 0xFF </td>
-	<td>  Get all the stack data stored in the EEPROM</td>
-</tr>
-<tr>	<td>   0x19 and 0x91 and 0x01<br> ,followed by the index<br>
-</td>
-	<td>  Get one element in the stack<br>  ex: 0x19 0x91 0x01 0x0a<br> (to get 10th element in the EEPROM) </td>
-</tr>
-</table>
 
-</pre>
 
