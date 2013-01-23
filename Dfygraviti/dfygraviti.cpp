@@ -2,6 +2,7 @@
 
 //#define DEBUG
 
+#define UNIXTIME 1
 RTC_DS1307 RTC;
 DateTime now;
 
@@ -18,7 +19,7 @@ uint8_t DfygravitiServer::begin() {
 		Serial.println("RTC Enabled");
 	}
 	getRtcTime();
-//	DBman.begin();
+	DBman.begin();
 	irrecv.enableIRIn();
 }
 /////////////////////////////////////RTC time set//
@@ -46,6 +47,26 @@ int DfygravitiServer::setRtcTime() {
 	RTC.adjust(DateTime(datex, timex));
 	getRtcTime();
 }
+
+int DfygravitiServer::setRtcTime(bool unixTime) {
+	uint32_t time = 0;
+	for (int i = 0; i < 9; i++)
+		while (1)
+			if (Serial.available() > 0) {
+				time = time + (Serial.read() - 0x30);
+				time *= 10;
+				break;
+			}
+	while (1)
+		if (Serial.available() > 0) {
+			time = time + (Serial.read() - 0x30);
+			break;
+		}
+	Serial.println("time set is ");
+	Serial.println(time);
+	RTC.adjust(DateTime(time));
+	getRtcTime();
+}
 /////////////////////////////////////RTC time get//
 void DfygravitiServer::getRtcTime() {
 	now = RTC.now();
@@ -71,15 +92,23 @@ void DfygravitiServer::irRemotebuttonPressPoll() {
 		irrecv.resume(); // Receive the next value
 	}
 #else
-	if (irrecv.decode(&results)) {
-		if (results.decode_type != UNKNOWN) {
-			Serial.println(results.value, HEX);
-//			DBman.push();
-		}
-		irrecv.resume();
-		
-	}
+	now = RTC.now();
+	DBman.push(now.unixtime(), 0xc0101);
+//	if (irrecv.decode(&results)) {
+//		if (results.decode_type != SONY) {
+//			Serial.println(results.value, HEX);
+//			now = RTC.now();
+//			DBman.push(now.unixtime(),results.value);
+//		}
+//		irrecv.resume();
+//	}
 #endif
+}
+void DfygravitiServer::clearMemory() {
+	DBman.clearMemory();
+}
+void DfygravitiServer::readRaw() {
+	DBman.readRaw();
 }
 
 char * DfygravitiServer::getSerialData(int byteLen) {
@@ -98,7 +127,7 @@ DatabaseManager::DatabaseManager() {
 }
 
 uint8_t DatabaseManager::begin() {
-	Serial.print("Database manager");
+	Serial.println("Database manager");
 	uint8_t programCode = EEPROM.read(0);
 	if (programCode != DatabaseString) {
 		now = RTC.now();
@@ -108,21 +137,41 @@ uint8_t DatabaseManager::begin() {
 
 bool DatabaseManager::initializeDB(uint32_t timenow) {
 	pushToEEPROM(0, 1, DatabaseString);
-	pushlastUpdateTime(timenow);
-	pushlastDumpTime(timenow);
+	lastUpdateTime(timenow);
+	lastDumpTime(timenow);
 	setEEPROMLocation (INTERNAL);
 	stackEntries(0);
 	stackStartAddress(13);
 	stackpointer(13);
 }
 
+void DatabaseManager::clearMemory() {
+	for (int i = 0; i < 512; i++)
+		EEPROM.write(i, 0);
+	Serial.print("memory Cleared");
+}
+
+void DatabaseManager::readRaw() {
+	Serial.println("\nReading EEPROM:\n");
+	for (int i = 0; i < 512; i++)
+		Serial.println(EEPROM.read(i));
+}
+
+void DatabaseManager::readRaw(uint8_t start, uint8_t stop) {
+	Serial.println("\nReading EEPROM:\n");
+	for (int i = start; i < stop; i++) {
+		Serial.print(EEPROM.read(i), HEX);
+		Serial.print(" ");
+	}
+	Serial.println();
+}
 ///////////////////////////////////////////////////////stack pointer set & retrive//////
-bool DatabaseManager::stackpointer(uint8_t address) {
+bool DatabaseManager::stackpointer(uint16_t address) {
 	return pushToEEPROM(12, 1, address);
 }
 
 uint8_t DatabaseManager::stackpointer() {
-	return getFromEEPROM(13, 1);
+	return getFromEEPROM(12, 1);
 }
 
 ///////////////////////////////////////////////////////// Set stack start address///////
@@ -148,44 +197,45 @@ uint32_t DatabaseManager::getFromEEPROM(uint8_t start, uint8_t bytes) {
 
 // for Internal EEprom
 	uint32_t temp = 0;
-	for (int i = 0; i < bytes; i++) {
-		temp = temp | EEPROM.read(start + i);
+	for (int i = bytes - 1; i >= 0; i--) {
 		temp <<= 8;
+		temp = temp | EEPROM.read(start + i);
+
 	}
 	return temp;
 }
 
-bool DatabaseManager::pushToEEPROM(uint8_t start, uint8_t bytes,
+uint16_t DatabaseManager::pushToEEPROM(uint8_t start, uint8_t bytes,
 		uint32_t data) {
 // make changes here for xternal eeprom
 
 // for Internal EEprom
-	uint32_t temp = 0;
+	uint8_t temp = 0;
 	for (int i = 0; i < bytes; i++) {
 		temp = data & 0xff;
 		EEPROM.write(start + i, temp);
 		data >>= 8;
 	}
-	return true;
+	return start + bytes;
 }
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 /////////////////////////////////////////////////////////// last updated time /////////////
-uint32_t DatabaseManager::getlastUpdateTime() {
+uint32_t DatabaseManager::lastUpdateTime() {
 	return getFromEEPROM(1, 4);
 }
 
-bool DatabaseManager::pushlastUpdateTime(uint32_t mytime) {
+bool DatabaseManager::lastUpdateTime(uint32_t mytime) {
 	return pushToEEPROM(1, 4, mytime);
 }
 
 /////////////////////////////////////////////////////////////last Dump time //////////////
 
-uint32_t DatabaseManager::getlastDumpTime() {
+uint32_t DatabaseManager::lastDumpTime() {
 	return getFromEEPROM(5, 4);
 }
 
-bool DatabaseManager::pushlastDumpTime(uint32_t mytime) {
+bool DatabaseManager::lastDumpTime(uint32_t mytime) {
 	return pushToEEPROM(5, 4, mytime);
 }
 
@@ -203,6 +253,10 @@ void DatabaseManager::incStackCount() {
 	pushToEEPROM(10, 1, temp + 1);
 }
 
+uint8_t DatabaseManager::stackCount() {
+	return getFromEEPROM(10, 1);
+}
+
 ///////////////////////////////////////////////////////////////////Housekeeping to get no of bytes////
 uint8_t DatabaseManager::getByteLen(uint32_t number) {
 	uint8_t count = 1;
@@ -214,37 +268,120 @@ uint8_t DatabaseManager::getByteLen(uint32_t number) {
 	return count;
 }
 
-
-
 uint8_t DatabaseManager::push(uint32_t receiption_time, uint32_t key) {
-	uint32_t dTime = receiption_time - getlastDumpTime();
+	uint32_t dTime = receiption_time - lastDumpTime();
+	uint32_t dUpdTime = receiption_time - lastUpdateTime();
+	uint8_t status;
+	uint32_t sp = stackpointer();
 	uint8_t dtimeLen = getByteLen(dTime);
 	uint8_t keylen = getByteLen(key);
-	uint8_t sp = stackpointer();
-	uint8_t status;
-	Serial.print("   Pushing  ");
-	Serial.print("  stackPointer:");
-	Serial.print(sp);
 
-//if ((dTime <= 1 && key == -1) || dTime <= 1 && key == lastkey) {
-//	if (stackStartAddress() != stackpointer())
-	pushToEEPROM(sp - 1, 1, getFromEEPROM(sp - 1, 1) + 1);
-//	return 0;
-//}
-	status = ((dtimeLen - 1) << 6) | ((keylen - 1) << 4)
-			| (getFromEEPROM(sp, 1) & 0x00ff);
-	Serial.print("  Register:");
-	Serial.print(status);
-	pushToEEPROM(sp, 1, status);
-	pushToEEPROM(sp + 1, dtimeLen, dTime);
-	pushToEEPROM(sp + dtimeLen + 1, keylen, key);
-	pushToEEPROM(sp + dtimeLen + keylen + 1, 1, 1);
-	stackpointer(sp + dtimeLen + keylen + 1 + 1);
-	pushToEEPROM(sp + dtimeLen + keylen + 1 + 1, 1,
-			(sp + dtimeLen + keylen + 1 + 1) & 0xff);
-	incStackCount();
-	lastkey = key;
-	Serial.print(sp + dtimeLen + keylen + 1 + 1);
-	Serial.print("\n");
-	return sp + dtimeLen + keylen + 1 + 1;
+	uint8_t sp2 = sp;
+
+	if ((dUpdTime < 2 && key == -1) || dUpdTime <= 1 && key == lastkey) {
+		if (stackStartAddress() != stackpointer()) {
+			pushToEEPROM(sp - 1, 1, getFromEEPROM(sp - 1, 1) + 1);
+			lastUpdateTime(receiption_time);
+			lastkey = key;
+			readRaw(0, sp + 10);
+		}
+		return 0;
+	}
+	if (stackCount() == 0) {
+		status = ((dtimeLen - 1) << 6) | ((keylen - 1) << 4)
+				| (getFromEEPROM(sp, 1) & 0x0f);
+
+//		Serial.print("\nstatus : ");
+//		Serial.print(status);
+//		Serial.print(" = ");
+		sp = pushToEEPROM(sp, 1, status);
+//		Serial.print(getFromEEPROM(sp - 1, 1));
+//		Serial.print(" address : ");
+//		Serial.print(sp - 1);
+//		Serial.print(" ");
+//		Serial.println(1);
+
+//		Serial.print("diffTime: ");
+//		Serial.print("  ");
+//		Serial.print(dTime);
+//		Serial.print(" = ");
+		sp = pushToEEPROM(sp, dtimeLen, dTime);
+//		Serial.print(getFromEEPROM(sp - dtimeLen, dtimeLen));
+//		Serial.print(" address : ");
+//		Serial.print(sp - dtimeLen);
+//		Serial.print(" ");
+//		Serial.println(dtimeLen);
+
+//		Serial.print("key  ");
+//		Serial.print(key, HEX);
+//		Serial.print(" = ");
+		sp = pushToEEPROM(sp, keylen, key);
+//		Serial.print(getFromEEPROM(sp - keylen, keylen), HEX);
+//		Serial.print("  address : ");
+//		Serial.print(sp - keylen);
+//		Serial.print(" ");
+//		Serial.println(keylen);
+
+//		Serial.print("count  ");
+//		Serial.print(1);
+//		Serial.print(" = ");
+		sp = pushToEEPROM(sp, 1, 1);
+//		Serial.print(getFromEEPROM(sp - 1, 1));
+//		Serial.print("   address : ");
+//		Serial.print(sp - 1);
+//		Serial.print(" ");
+//		Serial.println(1);
+
+//		Serial.print("count ");
+//		Serial.print((sp - sp2) & 0x0f, HEX);
+//		Serial.print(" = ");
+		pushToEEPROM(sp, 1, ((sp - sp2) & 0x0f));
+//		Serial.print(getFromEEPROM(sp, 1), HEX);
+//		Serial.print("  address : ");
+//		Serial.print(sp);
+//		Serial.print(" ");
+//		Serial.println(1);
+
+		stackpointer(sp);
+		lastUpdateTime(receiption_time);
+		incStackCount();
+
+		lastkey = key;
+		readRaw(0, sp + 10);
+		pop(stackStartAddress());
+
+}		//	clearMemory();
+	}
+
+void DatabaseManager::pop(uint16_t address) {
+	uint32_t temp = getFromEEPROM(address, 1);
+	uint32_t buttonTimeInstant = ((temp >> 6) & 0x03) + 1;
+	uint32_t key = ((temp >> 4) & 0x03) + 1;
+	uint8_t keypressCount = 0;
+	uint8_t totalByteCount = 0;
+	uint8_t address1 = address;
+	address++;
+
+	temp = getFromEEPROM(address, buttonTimeInstant) + lastDumpTime();
+	address += buttonTimeInstant;
+	buttonTimeInstant = temp;
+
+	temp = getFromEEPROM(address, key);
+	address += key;
+	key = temp;
+
+	keypressCount = getFromEEPROM(address++, 1);
+
+	totalByteCount = getFromEEPROM(address, 1) & 0xff;
+
+	if ((address - address1) == totalByteCount) {
+		Serial.print("  [{'Key':");
+		Serial.print(key, HEX);
+		Serial.print(",'Count':");
+		Serial.print(keypressCount);
+		Serial.print(",'Time':");
+		Serial.print(buttonTimeInstant);
+		Serial.print("}]");
+	}
+
 }
