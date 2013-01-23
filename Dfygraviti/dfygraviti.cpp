@@ -104,6 +104,17 @@ void DfygravitiServer::irRemotebuttonPressPoll() {
 	}
 #endif
 }
+
+void DfygravitiServer::setTvChannel() {
+	byte dat[2];
+	uint16_t channel = 0;
+	uint8_t digits = 0;
+	char * buffer = getSerialData(2);
+	channel = buffer[1] << (8 * 1) | buffer[0];
+	irsend.sendOnida(channel, 16);
+	irrecv.enableIRIn();
+}
+
 void DfygravitiServer::clearMemory() {
 	DBman.clearMemory();
 }
@@ -287,7 +298,7 @@ uint8_t DatabaseManager::push(uint32_t receiption_time, uint32_t key) {
 	uint8_t sp2 = sp;
 
 	if ((dUpdTime < 2 && key == -1) || dUpdTime <= 1 && key == lastkey) {
-		if (stackStartAddress() != stackpointer()) {
+		if (stackStartAddress() != sp) {
 			pushToEEPROM(sp - 1, 1, getFromEEPROM(sp - 1, 1) + 1);
 			lastUpdateTime(receiption_time);
 			lastkey = key;
