@@ -1,21 +1,22 @@
-#ifndef DFYGRAVITI_H
-#define DFYGRAVITI_H
-
-#define DatabaseString 149
-#define EXTERNAL 1
-#define INTERNAL 0
 #include <stdint.h>
-#include <IRremote.h>
-#include <Wire.h>
+#include "IRremote.h"
 #include <RTClib.h>
 #include <Arduino.h>
 #include <EEPROM.h>
+#include "Wire.h"
+
+#define DatabaseString 149
+
+#define EXTERNAL 1
+#define INTERNAL 0
+
 class DatabaseManager {
 public:
 	DatabaseManager();
 	bool initializeDB(uint32_t timenow);
 	uint32_t getlastDumpTime();
 	uint32_t getlastUpdateTime();
+	uint8_t begin();
 	bool pushlastDumpTime(uint32_t mytime);
 	bool pushlastUpdateTime(uint32_t mytime);
 	bool getEEPROMLocation();
@@ -40,18 +41,19 @@ private:
 	void incStackCount();
 };
 
+
+
 class DfygravitiServer {
 public:
 	DfygravitiServer();
-	void initialize();
 	int setRtcTime();
 	void getRtcTime();
 	void setTvChannel();
 	void irRemotebuttonPressPoll();
 	void clearMemory();
+	uint8_t begin();
 private:
 	uint16_t baud;
-	boolean rtc_enabled;
 	IRrecv irrecv;
 	IRsend irsend;
 	decode_results results;
@@ -64,10 +66,11 @@ public:
 	clock();
 	uint32_t getTime();
 	bool setTime(char *, char *);
+	uint8_t begin();
 private:
 	RTC_DS1307 RTC;
 	DateTime now;
 	uint32_t timeSnapshot;
-} rtcclk;
+};
 
-#endif
+

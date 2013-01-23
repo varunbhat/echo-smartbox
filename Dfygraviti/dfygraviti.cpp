@@ -1,81 +1,85 @@
 #include "dfygraviti.h"
 
-// constructors for setting the baud rates and initializing the values
+//#define DEBUG
+
+RTC_DS1307 RTC;
+DateTime now;
+
+//////////////////////////////////////////////////////server/////////
 DfygravitiServer::DfygravitiServer() {
-	DfygravitiServer::baud = 9600;
-	irrecv.enableIRIn();
-	initialize();
 }
 
-// initializes the RTC
-void DfygravitiServer::initialize() {
+uint8_t DfygravitiServer::begin() {
+	Wire.begin();
+	RTC.begin();
+	if (RTC.isrunning() == 0) {
+		Serial.println("RTC Disabled");
+	} else {
+		Serial.println("RTC Enabled");
+	}
+	getRtcTime();
+//	DBman.begin();
 	irrecv.enableIRIn();
-	DBman.initializeDB(rtcclk.getTime());
 }
-
-//Set the RTC for the present time.. needs to be invoked for maintainance
+/////////////////////////////////////RTC time set//
 int DfygravitiServer::setRtcTime() {
-	uint32_t time;
 	char datex[12];
-	char timex[9];
-	byte receivedBytes = 4;
+	char timex[8];
 	for (int i = 0; i < 11; i++)
 		while (1)
 			if (Serial.available()) {
 				datex[i] = Serial.read();
 				break;
 			}
+//	datex = getSerialData(12);
 	datex[11] = '\0';
-	//Serial.print(datex);
+	Serial.println(datex);
 	for (int i = 0; i < 8; i++)
 		while (1)
 			if (Serial.available()) {
 				timex[i] = Serial.read();
 				break;
 			}
-	timex[7] = '\0';
-	//Serial.println(timex);
-	//Serial.flush();
-	//time = dat[3] << (3 * 8) | dat[2] << (2 * 8) | dat[1] << (1 * 8) | dat[0];
-	rtcclk.setTime(datex, timex);
+//	timex = getSerialData(12);
+	timex[8] = '\0';
+	Serial.println(timex);
+	RTC.adjust(DateTime(datex, timex));
 	getRtcTime();
 }
-
-//Sends the unix time to the Phone in JSON format.. needs to be tested
+/////////////////////////////////////RTC time get//
 void DfygravitiServer::getRtcTime() {
-	Serial.print(rtcclk.getTime());
+	now = RTC.now();
+	Serial.print(now.year(), DEC);
+	Serial.print('/');
+	Serial.print(now.month(), DEC);
+	Serial.print('/');
+	Serial.print(now.day(), DEC);
+	Serial.print(' ');
+	Serial.print(now.hour(), DEC);
+	Serial.print(':');
+	Serial.print(now.minute(), DEC);
+	Serial.print(':');
+	Serial.print(now.second(), DEC);
+	Serial.println();
 }
-
-//Sets the tv channel.. 
-// Method of invoking: 
-// *first byte is the number of digits
-// * rest of the two bytes are the channel number code 
-void DfygravitiServer::setTvChannel() {
-	byte dat[2];
-	uint16_t channel = 0;
-	uint8_t digits = 0;
-	//char * buffer = getSerialData(2);
-//	channel = buffer[1] << (8 * 1) | buffer[0];
-	irsend.sendOnida(channel, 16);
-
-	//irsend.sendSony(0x490, 17);
-//	for (int i = 0; i < 10; i++)
-//		irsend.sendSony(0x490, 20);
-//		delay(100);
-}
+//////////////////////////////////////Remote polling//
 
 void DfygravitiServer::irRemotebuttonPressPoll() {
+#ifdef DEBUG	
+	if (irrecv.decode(&results)) {
+		Serial.println(results.value, HEX);
+		irrecv.resume(); // Receive the next value
+	}
+#else
 	if (irrecv.decode(&results)) {
 		if (results.decode_type != UNKNOWN) {
-			Serial.print(results.value, HEX);
-			DBman.push(rtcclk.getTime(), results.value);
+			Serial.println(results.value, HEX);
+//			DBman.push();
 		}
 		irrecv.resume();
+		
 	}
-}
-void DfygravitiServer::clearMemory() {
-	for (int i = 0; i < 512; i++)
-		EEPROM.write(i, 0);
+#endif
 }
 
 char * DfygravitiServer::getSerialData(int byteLen) {
@@ -89,12 +93,17 @@ char * DfygravitiServer::getSerialData(int byteLen) {
 	return buffer;
 }
 
-//////////////////////////////////////////////////Database Manager////////////////////////
-
+//////////////////////////////////////////////database manager//
 DatabaseManager::DatabaseManager() {
+}
+
+uint8_t DatabaseManager::begin() {
+	Serial.print("Database manager");
 	uint8_t programCode = EEPROM.read(0);
-	if (programCode != DatabaseString)
-		initializeDB(rtcclk.getTime());
+	if (programCode != DatabaseString) {
+		now = RTC.now();
+		initializeDB(now.unixtime());
+	}
 }
 
 bool DatabaseManager::initializeDB(uint32_t timenow) {
@@ -106,6 +115,7 @@ bool DatabaseManager::initializeDB(uint32_t timenow) {
 	stackStartAddress(13);
 	stackpointer(13);
 }
+
 ///////////////////////////////////////////////////////stack pointer set & retrive//////
 bool DatabaseManager::stackpointer(uint8_t address) {
 	return pushToEEPROM(12, 1, address);
@@ -134,8 +144,9 @@ uint8_t DatabaseManager::stackEntries() {
 ////////////////////////////////////////////////////////////////Pushing and getting to eeprom main Func//////
 // Little endian storage (LSB = Lower memory location)
 uint32_t DatabaseManager::getFromEEPROM(uint8_t start, uint8_t bytes) {
-	// make changes here for xternal eeprom
-	// for Internal EEprom
+// make changes here for xternal eeprom
+
+// for Internal EEprom
 	uint32_t temp = 0;
 	for (int i = 0; i < bytes; i++) {
 		temp = temp | EEPROM.read(start + i);
@@ -146,8 +157,9 @@ uint32_t DatabaseManager::getFromEEPROM(uint8_t start, uint8_t bytes) {
 
 bool DatabaseManager::pushToEEPROM(uint8_t start, uint8_t bytes,
 		uint32_t data) {
-	// make changes here for xternal eeprom
-	// for Internal EEprom
+// make changes here for xternal eeprom
+
+// for Internal EEprom
 	uint32_t temp = 0;
 	for (int i = 0; i < bytes; i++) {
 		temp = data & 0xff;
@@ -201,7 +213,9 @@ uint8_t DatabaseManager::getByteLen(uint32_t number) {
 	}
 	return count;
 }
-/////////////////////////////////////////////////////////////////////push values to the database ------------
+
+
+
 uint8_t DatabaseManager::push(uint32_t receiption_time, uint32_t key) {
 	uint32_t dTime = receiption_time - getlastDumpTime();
 	uint8_t dtimeLen = getByteLen(dTime);
@@ -212,11 +226,11 @@ uint8_t DatabaseManager::push(uint32_t receiption_time, uint32_t key) {
 	Serial.print("  stackPointer:");
 	Serial.print(sp);
 
-	//if ((dTime <= 1 && key == -1) || dTime <= 1 && key == lastkey) {
-	//	if (stackStartAddress() != stackpointer())
+//if ((dTime <= 1 && key == -1) || dTime <= 1 && key == lastkey) {
+//	if (stackStartAddress() != stackpointer())
 	pushToEEPROM(sp - 1, 1, getFromEEPROM(sp - 1, 1) + 1);
-	//	return 0;
-	//}
+//	return 0;
+//}
 	status = ((dtimeLen - 1) << 6) | ((keylen - 1) << 4)
 			| (getFromEEPROM(sp, 1) & 0x00ff);
 	Serial.print("  Register:");
@@ -233,25 +247,4 @@ uint8_t DatabaseManager::push(uint32_t receiption_time, uint32_t key) {
 	Serial.print(sp + dtimeLen + keylen + 1 + 1);
 	Serial.print("\n");
 	return sp + dtimeLen + keylen + 1 + 1;
-}
-
-clock::clock() {
-	Wire.begin();
-	RTC.begin();
-	if (!RTC.isrunning()) {
-		Serial.println("RTC Connected");
-	} else {
-		Serial.println("Rtc disabled");
-	}
-	
-}
-
-uint32_t clock::getTime() {
-	now = RTC.now();
-	timeSnapshot = now.unixtime();
-	return timeSnapshot;
-}
-
-bool clock::setTime(char*datex, char*timex) {
-	RTC.adjust(DateTime(datex, timex));
 }
