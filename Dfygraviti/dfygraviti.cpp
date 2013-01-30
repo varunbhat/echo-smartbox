@@ -109,10 +109,25 @@ void DfygravitiServer::setTvChannel() {
 	byte dat[2];
 	uint16_t channel = 0;
 	uint8_t digits = 0;
-	char * buffer = getSerialData(2);
+//	char * buffer = getSerialData(2);
+	char buffer[] = {'\0','\0'};
+	for (int i = 0; i < 8; i++)
+		while (1)
+			if (Serial.available()) {
+				buffer[1] = Serial.read();
+				break;
+			}
+	for (int i = 0; i < 8; i++)
+			while (1)
+				if (Serial.available()) {
+					buffer[0] = Serial.read();
+					break;
+				}
 	channel = buffer[1] << (8 * 1) | buffer[0];
-	irsend.sendOnida(channel, 16);
+	irsend.sendOnida1(channel, 16);
 	irrecv.enableIRIn();
+	Serial.print("Sent Channel is:");
+	Serial.println(channel, HEX);
 }
 
 void DfygravitiServer::clearMemory() {
