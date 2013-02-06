@@ -15,9 +15,11 @@ uint8_t DfygravitiServer::begin() {
 	RTC.begin();
 	if (RTC.isrunning() == 0) {
 		Serial.println("RTC Disabled");
+		RTC.adjust(DateTime(__DATE__, __TIME__));
 	} else {
 		Serial.println("RTC Enabled");
 	}
+	
 	getRtcTime();
 	DBman.begin();
 	irrecv.enableIRIn();
@@ -86,14 +88,6 @@ void DfygravitiServer::getRtcTime() {
 //////////////////////////////////////Remote polling//
 
 void DfygravitiServer::irRemotebuttonPressPoll() {
-#ifdef DEBUG	
-	if (irrecv.decode(&results)) {
-		Serial.println(results.value, HEX);
-		irrecv.resume(); // Receive the next value
-	}
-#else
-//	now = RTC.now();
-//	DBman.push(now.unixtime(), 0xabcde);
 	if (irrecv.decode(&results)) {
 		if (results.decode_type != UNKNOWN) {
 			Serial.println(results.value, HEX);
@@ -102,28 +96,28 @@ void DfygravitiServer::irRemotebuttonPressPoll() {
 		}
 		irrecv.resume();
 	}
-#endif
 }
 
 void DfygravitiServer::setTvChannel() {
 	byte dat[2];
 	uint16_t channel = 0;
 	uint8_t digits = 0;
-//	char * buffer = getSerialData(2);
-	char buffer[] = {'\0','\0'};
-	for (int i = 0; i < 8; i++)
+	Serial.println("Hey I'm trying to send");
+	for (int i = 0; i <1 ; i++)
 		while (1)
 			if (Serial.available()) {
-				buffer[1] = Serial.read();
+				dat[1] = Serial.read();
 				break;
 			}
-	for (int i = 0; i < 8; i++)
+	for (int i = 0; i <1 ; i++)
 			while (1)
 				if (Serial.available()) {
-					buffer[0] = Serial.read();
+					dat[0] = Serial.read();
 					break;
 				}
-	channel = buffer[1] << (8 * 1) | buffer[0];
+	channel = (dat[1] << (8 * 1)) | dat[0];
+//	irsend.sendOnida1(channel, 16);
+//	channel = 0x0c0e8;
 	irsend.sendOnida1(channel, 16);
 	irrecv.enableIRIn();
 	Serial.print("Sent Channel is:");
