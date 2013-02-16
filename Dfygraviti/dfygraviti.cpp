@@ -19,7 +19,6 @@ uint8_t DfygravitiServer::begin() {
 	} else {
 		Serial.println("RTC Enabled");
 	}
-	
 	getRtcTime();
 	DBman.begin();
 	irrecv.enableIRIn();
@@ -102,22 +101,19 @@ void DfygravitiServer::setTvChannel() {
 	byte dat[2];
 	uint16_t channel = 0;
 	uint8_t digits = 0;
-	Serial.println("Hey I'm trying to send");
-	for (int i = 0; i <1 ; i++)
+	for (int i = 0; i < 1; i++)
 		while (1)
 			if (Serial.available()) {
 				dat[1] = Serial.read();
 				break;
 			}
-	for (int i = 0; i <1 ; i++)
-			while (1)
-				if (Serial.available()) {
-					dat[0] = Serial.read();
-					break;
-				}
+	for (int i = 0; i < 1; i++)
+		while (1)
+			if (Serial.available()) {
+				dat[0] = Serial.read();
+				break;
+			}
 	channel = (dat[1] << (8 * 1)) | dat[0];
-//	irsend.sendOnida1(channel, 16);
-//	channel = 0x0c0e8;
 	irsend.sendOnida1(channel, 16);
 	irrecv.enableIRIn();
 	Serial.print("Sent Channel is:");

@@ -134,3 +134,74 @@
 ////		Serial.print(sp);
 ////		Serial.print(" ");
 ////		Serial.println(1);
+
+
+
+
+
+
+//#include <dfygraviti.h>
+//DfygravitiServer echo;
+//
+////Jan 23 201315:33:24
+//
+//void setup()
+//{
+//  Serial.begin(9600);
+//  Serial.println("started");
+//  echo.begin();
+//  pinMode(2,OUTPUT);
+//  pinMode(3,OUTPUT);
+//  digitalWrite(2,LOW);
+//  pinMode(13,OUTPUT);
+//  digitalWrite(13,HIGH);
+//  pinMode(11,INPUT);
+//  digitalWrite(2,LOW);
+//  pinMode(A3,OUTPUT);
+//  digitalWrite(A3,HIGH);
+//  pinMode(A2,OUTPUT);
+//  digitalWrite(A2,LOW);
+//
+//}
+//
+//void loop()  
+//{
+//  if (Serial.available()>=2)
+//    switch (Serial.read())
+//    {
+//    case 'a': // 33a0
+//      if (Serial.read()=='a')
+//        echo.setRtcTime(); 
+//    case 0x34: // 34a0
+//      if (Serial.read()==0xa0)
+//        echo.setRtcTime(1); 
+//      break;
+//    case 'g'://1991
+//      if (Serial.read()=='g')
+//        echo.pop(); 
+//      break;
+//    case 'p'://3839
+//      if (Serial.read()=='p')
+//        Serial.print("yeah i get it");
+//        echo.setTvChannel();
+//      break;
+//    case 'r'://4521
+//      if (Serial.read()=='r')
+//        echo.getRtcTime(); 
+//      break; 
+//    case 'c': //514a
+//      if (Serial.read()=='c')
+//        echo.clearMemory();
+//      break;
+//    case 0xc3: //c3ab
+//      if (Serial.read()==0xab)
+//        echo.readRaw();
+//    case 0xaa: //c3ab
+//      if (Serial.read()==0xbb)
+//        echo.begin();  
+//      break;
+//    default:
+//      break;
+//    }
+//  echo.irRemotebuttonPressPoll();
+//}
