@@ -6,7 +6,7 @@ DfygravitiServer echo;
 void setup()
 {
   Serial.begin(9600);
-  Serial.println("started");
+
   pinMode(13,OUTPUT);
   digitalWrite(13,HIGH);
   pinMode(A3,OUTPUT);
@@ -16,7 +16,7 @@ void setup()
   pinMode(13,OUTPUT);
   digitalWrite(13,HIGH);
   pinMode(11,INPUT);
-
+  Serial.begin(9600);
   echo.begin();
 }
 
@@ -38,7 +38,6 @@ void loop()
       break;
     case 0x38://3839
       if (Serial.read()==0x39)
-        Serial.print("yeah i get it");
       echo.setTvChannel();
       break;
     case 0x45://4521
@@ -54,7 +53,7 @@ void loop()
         echo.readRaw();
     case 0xaa: //c3ab
       if (Serial.read()==0xbb)
-        echo.begin();  
+        echo.status();  
       break;
     default:
       break;

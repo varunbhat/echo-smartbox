@@ -23,6 +23,17 @@ uint8_t DfygravitiServer::begin() {
 	DBman.begin();
 	irrecv.enableIRIn();
 }
+
+uint8_t DfygravitiServer::status() {
+	if (RTC.isrunning() == 0) {
+		Serial.println("RTC Disabled");
+	} else {
+		Serial.println("RTC Enabled");
+		getRtcTime();
+	}
+	DBman.begin();
+	irrecv.enableIRIn();
+}
 /////////////////////////////////////RTC time set//
 int DfygravitiServer::setRtcTime() {
 	char datex[12];
@@ -63,7 +74,7 @@ int DfygravitiServer::setRtcTime(bool unixTime) {
 			time = time + (Serial.read() - 0x30);
 			break;
 		}
-	Serial.println("time set is ");
+	Serial.print("time set is ");
 	Serial.println(time);
 	RTC.adjust(DateTime(time));
 	getRtcTime();
@@ -84,12 +95,30 @@ void DfygravitiServer::getRtcTime() {
 	Serial.print(now.second(), DEC);
 	Serial.println();
 }
+
+void DfygravitiServer::getRtcTime(DateTime time) {
+	Serial.print(time.year(), DEC);
+	Serial.print('/');
+	Serial.print(time.month(), DEC);
+	Serial.print('/');
+	Serial.print(time.day(), DEC);
+	Serial.print(' ');
+	Serial.print(time.hour(), DEC);
+	Serial.print(':');
+	Serial.print(time.minute(), DEC);
+	Serial.print(':');
+	Serial.print(time.second(), DEC);
+}
+
 //////////////////////////////////////Remote polling//
 
 void DfygravitiServer::irRemotebuttonPressPoll() {
 	if (irrecv.decode(&results)) {
 		if (results.decode_type != UNKNOWN) {
-			Serial.println(results.value, HEX);
+			///////////debug///////////
+			if (results.value != -1)
+				Serial.println(results.value, HEX);
+			///////////////////////////
 			now = RTC.now();
 			DBman.push(now.unixtime(), results.value);
 		}
@@ -173,15 +202,15 @@ void DatabaseManager::clearMemory() {
 }
 
 void DatabaseManager::readRaw() {
-
 	for (int i = 0; i < 512; i++) {
 		Serial.print(EEPROM.read(i));
 		Serial.print(" ");
 	}
+	Serial.println();
 }
 
 void DatabaseManager::readRaw(uint8_t start, uint8_t stop) {
-	Serial.println("\nReading EEPROM:");
+//	Serial.println("Reading EEPROM:");
 	for (int i = start; i < stop; i++) {
 		Serial.print(EEPROM.read(i), HEX);
 		Serial.print(" ");
@@ -224,7 +253,6 @@ uint32_t DatabaseManager::getFromEEPROM(uint8_t start, uint8_t bytes) {
 	for (int i = bytes - 1; i >= 0; i--) {
 		temp <<= 8;
 		temp = temp | EEPROM.read(start + i);
-
 	}
 	return temp;
 }
@@ -301,17 +329,19 @@ uint8_t DatabaseManager::push(uint32_t receiption_time, uint32_t key) {
 	uint8_t keylen = getByteLen(key);
 
 	uint8_t sp2 = sp;
+	if (sp > 500)
+		return 0;
 
 	if ((dUpdTime < 2 && key == -1) || dUpdTime <= 1 && key == lastkey) {
 		if (stackStartAddress() != sp) {
 			pushToEEPROM(sp - 1, 1, getFromEEPROM(sp - 1, 1) + 1);
 			lastUpdateTime(receiption_time);
 			lastkey = key;
-//			readRaw(0, sp + 10);
 		}
-//		Serial.println("count incremented");
 		return 0;
 	}
+	if (key == -1)
+		return 0;
 	status = ((dtimeLen - 1) << 6) | ((keylen - 1) << 4)
 			| (getFromEEPROM(sp, 1) & 0x0f);
 
@@ -337,6 +367,7 @@ void DatabaseManager::pop() {
 	uint8_t address1;
 	Serial.print("[");
 	while (address - beginaddress) {
+
 		address = address - (getFromEEPROM(address, 1) & 0x0f);
 		address1 = address;
 		uint32_t temp = getFromEEPROM(address, 1);
@@ -344,7 +375,7 @@ void DatabaseManager::pop() {
 		uint32_t key = ((temp >> 4) & 0x03) + 1;
 		uint8_t keypressCount = 0;
 		uint8_t totalByteCount = 0;
-
+		DateTime time;
 		address++;
 
 		temp = getFromEEPROM(address, buttonTimeInstant) + lastDumpTime();
@@ -363,11 +394,25 @@ void DatabaseManager::pop() {
 		Serial.print(key, HEX);
 		Serial.print(",'Count':");
 		Serial.print(keypressCount);
-		Serial.print(",'Time':");
-		Serial.print(buttonTimeInstant);
-		Serial.println("}");
+		Serial.print(",'Time':'");
+		time = DateTime(buttonTimeInstant);
+		Serial.print(time.year(), DEC);
+		Serial.print('/');
+		Serial.print(time.month(), DEC);
+		Serial.print('/');
+		Serial.print(time.day(), DEC);
+		Serial.print(' ');
+		Serial.print(time.hour(), DEC);
+		Serial.print(':');
+		Serial.print(time.minute(), DEC);
+		Serial.print(':');
+		Serial.print(time.second(), DEC);
+		Serial.print("'}");
 
 		address = address1;
+
+		if ((address - beginaddress) > 0)
+			Serial.print(",");
 	}
-	Serial.print("]");
+	Serial.println("]");
 }

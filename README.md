@@ -91,4 +91,55 @@ Please leave a comment if you find out what the error is.
 * I2C EEPROM extension not working.
 
 
+## Memory Datastructure
 
+
+the memory is divided in the following fashion:
+
+
+| Address| Schema|
+|:-----:|:----------|
+| 0  | validity of the memory|
+| 1  | Last Update Time |
+| 2  | |
+| 3  | |
+| 4  | |
+| 5   |Last Dump Time|
+| 6   | |
+| 7   | |
+| 8   | |
+| 9   |Status flags|
+| 10   |No. of Stack Entries|
+| 11   |Start Address|
+
+The values stored include the following
+
+| Address| Schema|
+|:-----:|:----------|
+| 13  | byte Division |
+| 14  | time difference|
+| 15  | |
+| 16  | key pressed|
+| 17  |  |
+| 18  | last address |
+
+The byte division has the following:
+ 
+| Address| Schema |
+|:-----:|:----------|
+| 7  | time Difference Bytes used |
+| 6  | |
+| 5  | no. of bytes key has used  |
+| 4  | |
+| 3  | reserved|
+| 2  | reserved|
+| 1  | reserved|
+| 0  | reserved|
+
+
+### Status Flags
+The status flag is made up of the following things:
+
+
+		
+		

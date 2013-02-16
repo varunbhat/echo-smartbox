@@ -17,6 +17,7 @@ public:
 	uint32_t lastDumpTime();
 	uint32_t lastUpdateTime();
 	uint8_t begin();
+	
 	bool lastDumpTime(uint32_t mytime);
 	bool lastUpdateTime(uint32_t mytime);
 	bool getEEPROMLocation();
@@ -50,10 +51,12 @@ public:
 	int setRtcTime();
 	int setRtcTime(bool unixTime);
 	void getRtcTime();
+	void getRtcTime(DateTime time);
 	void setTvChannel();
 	void irRemotebuttonPressPoll();
 	void clearMemory();
 	uint8_t begin();
+	uint8_t status();
 	void readRaw();
 	void pop();
 private:
